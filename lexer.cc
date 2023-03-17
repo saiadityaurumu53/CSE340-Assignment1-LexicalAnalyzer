@@ -20,7 +20,7 @@ string reserved[] = { "END_OF_FILE",
     "EQUAL", "COLON", "COMMA", "SEMICOLON",
     "LBRAC", "RBRAC", "LPAREN", "RPAREN",
     "NOTEQUAL", "GREATER", "LESS", "LTEQ", "GTEQ",
-    "DOT", "NUM", "ID", "ERROR" // TODO: Add labels for new token types here (as string)
+    "DOT", "NUM", "ID", "ERROR", "REALNUM", "BASE08NUM", "BASE16NUM" // TODO: Add labels for new token types here (as string)
 };
 
 #define KEYWORDS_COUNT 5
@@ -81,9 +81,96 @@ TokenType LexicalAnalyzer::FindKeywordIndex(string s)
     return ERROR;
 }
 
+// Token LexicalAnalyzer::ScanNumber()
+// {
+//     char c;
+//     char c2;
+//     char c3;
+//     char c4;
+//     char c5;
+
+//     input.GetChar(c);
+//     if (isdigit(c)) {
+//         if (c == '0') {
+//             tmp.lexeme = "0";
+//         } else {
+//             tmp.lexeme = "";
+//             while (!input.EndOfInput() && isdigit(c)) {
+//                 tmp.lexeme += c;
+//                 input.GetChar(c);
+//             }
+//             if (!input.EndOfInput()) {
+//                 input.UngetChar(c);
+//             }
+//         }
+//         // TODO: You can check for REALNUM, BASE08NUM and BASE16NUM here!        
+//         tmp.token_type = NUM;
+//         tmp.line_no = line_no;
+
+//         // if (!input.EndOfInput())
+//         // {
+//             input.GetChar(c);
+//             // if (!input.EndOfInput())
+//             // {
+//                 input.GetChar(c2);
+            
+            
+        
+        
+
+//         if (c == '.')
+//         {
+//             //might be a REALNUM. So, After DOT check for another digits
+//             //Rule : REALNUM = NUM DOT digit digit*
+
+//             if (isdigit(c2))
+//             {
+//                 //it is a REALNUM according to longest preference rule
+//                 tmp.lexeme += c;
+//                 tmp.lexeme += c2;
+
+//                //start for seeing for the digits
+//                while (!input.EndOfInput() && isdigit(c)) {
+//                    tmp.lexeme += c;
+//                    input.GetChar(c);
+//                 }
+//                 if (!input.EndOfInput()) {
+//                    input.UngetChar(c);
+//                 }
+//                 //end
+
+//                 tmp.token_type = REALNUM;
+//                 tmp.line_no = line_no;
+
+//             }else{
+//                 //it's not a REALNUM so unget them
+//                 //Ungetting in a reverse order as mentioned
+//                 input.UngetChar(c2);
+//                 input.UngetChar(c);
+//             }
+            
+//         }
+        
+
+
+//         return tmp;
+//     } else {
+//         if (!input.EndOfInput()) {
+//             input.UngetChar(c);
+//         }
+//         tmp.lexeme = "";
+//         tmp.token_type = ERROR;
+//         tmp.line_no = line_no;
+//         return tmp;
+//     }
+// }
+
+
 Token LexicalAnalyzer::ScanNumber()
 {
     char c;
+    char ch1 ,ch2 , ch3, ch4;
+    string str1;
 
     input.GetChar(c);
     if (isdigit(c)) {
@@ -100,6 +187,164 @@ Token LexicalAnalyzer::ScanNumber()
             }
         }
         // TODO: You can check for REALNUM, BASE08NUM and BASE16NUM here!
+        
+        //REALNUM
+        input.GetChar(ch1);
+        if (ch1 == '.')
+        {
+            //Here, the input may be REALNUM
+            input.GetChar(ch2);
+            if (isdigit(ch2))
+            {
+                //is a REALNUM
+                tmp.lexeme = tmp.lexeme + ch1;
+                tmp.lexeme = tmp.lexeme + ch2;
+                input.GetChar(ch3);
+                while(!input.EndOfInput() && isdigit(ch3)){
+                    tmp.lexeme = tmp.lexeme + ch3;
+                    input.GetChar(ch3);
+                }
+                if (!input.EndOfInput())
+                {
+                    input.UngetChar(ch3);
+                }
+                tmp.token_type = REALNUM;
+                tmp.line_no = line_no;
+                return tmp;
+            }else{
+                //not a REALNUM
+                input.UngetChar(ch2);
+                input.UngetChar(ch1);
+            }
+        }else{
+             input.UngetChar(ch1);
+        }
+
+        //BASE08NUM
+        input.GetChar(ch1);
+        input.GetChar(ch2);
+        input.GetChar(ch3);
+        if ((ch1 == 'x') && (ch2 == '0') && (ch3 == '8'))
+        {
+            str1 = tmp.lexeme;
+            //checking if this string is a valid BASE08NUM
+            //We can Check because 
+            //NUM       = ((pdigit . (digit)*) + 0)
+            //BASE08NUM = ((pdigit8 . (digit8)*) + 0) (x) (08)
+            //Here the BASE08NUM's numbers are nothing but the Subset of NUM plus x08
+            //Hence, traverse through the string and check it
+            if (str1 == "0")
+            {
+                tmp.lexeme = tmp.lexeme + ch1 + ch2 + ch3;
+                tmp.token_type = BASE08NUM;
+                tmp.line_no = line_no;
+                return tmp;
+            }else{
+                int flag = 0;
+                for (int i = 0; i < str1.length(); i++)
+                {
+                    if (((str1[i] >= '0') && (str1[i] <= '7')))
+                    {
+                        //if true then we need to continue
+                        continue;
+                    }else{
+                        //we need to mark the flag as one and break as it's not BASE08NUM
+                        flag = 1;
+                        break;
+                    }
+                } 
+
+                //according to flag make a decision
+                if (!flag)
+                {
+                    //Is a BASE08NUM
+                    tmp.lexeme = tmp.lexeme + ch1 + ch2 + ch3;
+                    tmp.token_type = BASE08NUM;
+                    tmp.line_no = line_no;
+                    return tmp;
+                }else{
+                    //Not a BASE08NUM
+                    input.UngetChar(ch3);
+                    input.UngetChar(ch2);
+                    input.UngetChar(ch1);
+                }
+                
+            }
+            
+        }else{
+            input.UngetChar(ch3);
+            input.UngetChar(ch2);
+            input.UngetChar(ch1);
+        }
+
+
+        //BASE16NUM
+        //Here, only pdigit and digit x16 will be present (No Letters and only Numbers)
+        //We will check for even Letters in the further code
+        //Idea: For BASE16NUM containing A,B,C, etc , it should start with a Number or else those numbers which will
+              //start with alphabets will be counted as IDs because IDs should be given preference according to the order.
+              //Hence, here, we can also check for 
+        input.GetChar(ch1);
+        input.GetChar(ch2);
+        input.GetChar(ch3);
+        if ((ch1 == 'x') && (ch2 == '1') && (ch3 == '6'))
+        {
+            str1 = tmp.lexeme;
+            
+            tmp.lexeme = tmp.lexeme + ch1 + ch2 + ch3;
+            tmp.token_type = BASE16NUM;
+            tmp.line_no = line_no;
+            return tmp;
+            
+        }else{
+            input.UngetChar(ch3);
+            input.UngetChar(ch2);
+            input.UngetChar(ch1);
+        }
+
+
+        //we can check for A,B,C,D,E,F over here.
+        //The previous tmp lexeme should only be of numbers in this case.
+        //The zero case is handled above.
+        string tempstring = "";  //initializing empty string
+        input.GetChar(c);
+        if(c >= 'A' && c <= 'F'){
+
+             while (!input.EndOfInput() && ( isdigit(c) || (c >= 'A' && c <= 'F'))) {
+                tempstring += c;
+                input.GetChar(c);
+            }
+            if (!input.EndOfInput()) {
+                input.UngetChar(c);
+            }
+
+            input.GetChar(ch1);
+            input.GetChar(ch2);
+            input.GetChar(ch3);
+
+            if ((ch1 == 'x') && (ch2 == '1') && (ch3 == '6'))
+            {
+                tmp.lexeme = tmp.lexeme + tempstring + ch1 + ch2 + ch3;
+                tmp.token_type = BASE16NUM;
+                tmp.line_no = line_no;
+                return tmp;
+            }else{
+                input.UngetChar(ch3);
+                input.UngetChar(ch2);
+                input.UngetChar(ch1);
+                for (int i = tempstring.length() - 1; i >= 0; i--)
+                {
+                    input.UngetChar(tempstring[i]);
+                }
+                
+            }
+            
+        }else{
+            input.UngetChar(c);
+        }
+
+
+        
         tmp.token_type = NUM;
         tmp.line_no = line_no;
         return tmp;
@@ -113,6 +358,7 @@ Token LexicalAnalyzer::ScanNumber()
         return tmp;
     }
 }
+
 
 Token LexicalAnalyzer::ScanIdOrKeyword()
 {
